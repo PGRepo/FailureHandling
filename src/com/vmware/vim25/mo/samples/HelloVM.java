@@ -31,11 +31,13 @@ package com.vmware.vim25.mo.samples;
 
 import java.io.FileReader;
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.rmi.RemoteException;
 import java.util.Properties;
 
+import com.controller.vm.VirtualMachineController;
 import com.vmware.vim25.*;
 import com.vmware.vim25.mo.*;
 import com.vmware.vim25.mo.util.OptionSpec;
@@ -357,7 +359,7 @@ if (b)
 	   
 	   
 	   
-	   
+	   /*
 	   
 	  System.out.println("############################ Create VM ########################");
 
@@ -493,7 +495,191 @@ if (b)
     nic.setKey(0);
    
     nicSpec.setDevice(nic);
-    return nicSpec;
+    return nicSpec;*/
+
+
+// Create snapshot of vm
+
+/*
+================================================================================*/
+InetAddress address = InetAddress.getByName("130.65.132.192");
+if(address.isReachable(100000))
+	{
+	System.out.println("reached");
+	}
+else
+{
+	System.out.println("not reachable");
+}
+
+
+
+
+
+    //String vmname = args[3];
+    //String op = args[4];
+    String operation = "create";
+    String vmName= "Pratik_VM";
+    
+    
+    //please change the following three depending your op
+    String snapshotname = "SanpShot"+"_"+vmName;
+    String desc = "SnapShot created for vm. this is description";
+    boolean removechild = true;
+    
+    
+
+    //Folder rootFolder = si.getRootFolder();
+    VirtualMachine vm = (VirtualMachine) new InventoryNavigator(
+      rootFolder).searchManagedEntity("VirtualMachine", vmName);
+
+    if(vm==null)
+    {
+      System.out.println("No VM " + vmName + " found");
+      serviceinstance.getServerConnection().logout();
+      return;
+    }
+
+    if("create".equalsIgnoreCase(operation))
+    {
+      Task task = vm.createSnapshot_Task(
+          snapshotname, desc, false, false);
+      if(task.waitForMe()==Task.SUCCESS)
+      {
+        System.out.println("Snapshot was created.");
+      }
+    }
+    else if("list".equalsIgnoreCase(operation))
+    {
+      listSnapshots(vm);
+    }
+    else if(operation.equalsIgnoreCase("revert")) 
+    {
+      VirtualMachineSnapshot vmsnap = getSnapshotInTree(
+          vm, snapshotname);
+      if(vmsnap!=null)
+      {
+        Task task = vmsnap.revertToSnapshot_Task(null);
+        if(task.waitForMe()==Task.SUCCESS)
+        {
+          System.out.println("Reverted to snapshot:" 
+              + snapshotname);
+        }
+      }
+    }
+    else if(operation.equalsIgnoreCase("removeall")) 
+    {
+      Task task = vm.removeAllSnapshots_Task();      
+      if(task.waitForMe()== Task.SUCCESS) 
+      {
+        System.out.println("Removed all snapshots");
+      }
+    }
+    else if(operation.equalsIgnoreCase("remove")) 
+    {
+      VirtualMachineSnapshot vmsnap = getSnapshotInTree(
+          vm, snapshotname);
+      if(vmsnap!=null)
+      {
+        Task task = vmsnap.removeSnapshot_Task(removechild);
+        if(task.waitForMe()==Task.SUCCESS)
+        {
+          System.out.println("Removed snapshot:" + snapshotname);
+        }
+      }
+    }
+    else 
+    {
+      System.out.println("Invalid operation");
+      return;
+    }
+    serviceinstance.getServerConnection().logout();
+  }
+  
+  static VirtualMachineSnapshot getSnapshotInTree(
+      VirtualMachine vm, String snapName)
+  {
+    if (vm == null || snapName == null) 
+    {
+      return null;
+    }
+
+    VirtualMachineSnapshotTree[] snapTree = 
+        vm.getSnapshot().getRootSnapshotList();
+    if(snapTree!=null)
+    {
+      ManagedObjectReference mor = findSnapshotInTree(
+          snapTree, snapName);
+      if(mor!=null)
+      {
+        return new VirtualMachineSnapshot(
+            vm.getServerConnection(), mor);
+      }
+    }
+    return null;
+  }
+
+  static ManagedObjectReference findSnapshotInTree(
+      VirtualMachineSnapshotTree[] snapTree, String snapName)
+  {
+    for(int i=0; i <snapTree.length; i++) 
+    {
+      VirtualMachineSnapshotTree node = snapTree[i];
+      if(snapName.equals(node.getName()))
+      {
+        return node.getSnapshot();
+      } 
+      else 
+      {
+        VirtualMachineSnapshotTree[] childTree = 
+            node.getChildSnapshotList();
+        if(childTree!=null)
+        {
+          ManagedObjectReference mor = findSnapshotInTree(
+              childTree, snapName);
+          if(mor!=null)
+          {
+            return mor;
+          }
+        }
+      }
+    }
+    return null;
+  }
+
+  static void listSnapshots(VirtualMachine vm)
+  {
+    if(vm==null)
+    {
+      return;
+    }
+    VirtualMachineSnapshotInfo snapInfo = vm.getSnapshot();
+    VirtualMachineSnapshotTree[] snapTree = 
+      snapInfo.getRootSnapshotList();
+    printSnapshots(snapTree);
+  }
+
+  static void printSnapshots(
+      VirtualMachineSnapshotTree[] snapTree)
+  {
+    for (int i = 0; snapTree!=null && i < snapTree.length; i++) 
+    {
+      VirtualMachineSnapshotTree node = snapTree[i];
+      System.out.println("Snapshot Name : " + node.getName());           
+      VirtualMachineSnapshotTree[] childTree = 
+        node.getChildSnapshotList();
+      if(childTree!=null)
+      {
+        printSnapshots(childTree);
+      }
+    }
+ 
+
+
+
+
+
+
   
 	}
 	

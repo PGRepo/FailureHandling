@@ -20,5 +20,6 @@
 	<classpathentry kind="lib" path="E:/green sheet/283 fall 14/project/project-1/cmpe283tutorial/jars/vijava2120100824.jar"/>
 	<classpathentry kind="lib" path="E:/green sheet/283 fall 14/project/project-1/cmpe283tutorial/jars/wsdl4j.jar"/>
 	<classpathentry kind="lib" path="E:/green sheet/283 fall 14/project/project-1/cmpe283tutorial/jars/xml-apis.jar"/>
+	<classpathentry kind="lib" path="E:/green sheet/283 fall 14/externaljar files/scia10/lib/scia10.jar"/>
 	<classpathentry kind="output" path="src"/>
 </classpath>
