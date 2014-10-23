@@ -2,8 +2,11 @@ package com.controller.vm;
 
 
 
+import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.InetAddress;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.rmi.RemoteException;
@@ -28,14 +31,16 @@ public class VirtualMachineController
 	ServiceInstance serviceinstance;
 	Logger logger = Logger.getLogger( VirtualMachineController.class.getName());
 	
-	public VirtualMachineController(ServiceInstance si, FileHandler fh)
+	/*public VirtualMachineController(ServiceInstance si)
 	{
 		serviceinstance = si;
 			
-	}
+	}*/
 	
-	public List<VirtualMachine> getAllVM()
+	public synchronized List<VirtualMachine> getAllVM(ServiceInstance si)
 	{
+		ServiceInstance serviceinstance = si;
+		logger.info("Getting the list of virtual machine..."+logger.getName());
 		Folder rootFolder = serviceinstance.getRootFolder();
 		ManagedEntity[] virtual_machine_me;
 		List<VirtualMachine> listOfVM = new ArrayList<VirtualMachine>();
@@ -55,9 +60,10 @@ public class VirtualMachineController
 				{
 					VirtualMachine vm = (VirtualMachine) me;
 					listOfVM.add(vm);
-					System.out.println(vm.getName());
+					//System.out.println(vm.getName());
 					
 				}
+				
 			}
 		
 		}
@@ -66,11 +72,63 @@ public class VirtualMachineController
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 		}
+		logger.info("Got the list of virtul machines...."+logger.getName());
 		return listOfVM;
 			
 			
 			
 	}
+	
+	
+	
+	public String pingVM(String ipAddress)
+	{
+	
+		
+		
+        String pingResult = "";
+
+        String pingCmd = "ping " + ipAddress;
+        try {
+            Runtime r = Runtime.getRuntime();
+            Process p = r.exec(pingCmd);
+
+            BufferedReader in = new BufferedReader(new
+            InputStreamReader(p.getInputStream()));
+            String inputLine;
+            while ((inputLine = in.readLine()) != null) {
+                System.out.println(inputLine);
+                pingResult += inputLine;
+            }
+            in.close();
+
+        } catch (IOException e) {
+            System.out.println(e);
+        }
+        
+        return pingResult;
+	}
+	
+	
+	
+	public void ping(String  ipAddress)
+	{
+		try
+        {
+            InetAddress address = InetAddress.getByName(ipAddress);
+
+            // Try to reach the specified address within the timeout
+            // periode. If during this periode the address cannot be
+            // reach then the method returns false.
+            boolean reachable = address.isReachable(100000000);
+
+            System.out.println("Is host reachable? " + reachable);
+        } catch (Exception e)
+        {
+            e.printStackTrace();
+        }
+	}
+	
 	
 	public boolean turnoffVM(VirtualMachine vm)
 	{
@@ -318,15 +376,242 @@ public class VirtualMachineController
 		
 	}
 	
-	public void createVM()
+	
+	 /*
+	  * Since create operation is used more than any other operation 
+	  * we can seprate the function according to operation This is not a good practice
+	  * 
+	  * Opearation list:
+	  * create
+	  * remove
+	  * list
+	  * removeall
+	  * 
+	  * 
+	  * 
+	  */
+	
+	public synchronized boolean revertToSnapShot(VirtualMachine vm)
 	{
-		
+		String vmName= vm.getName();
+	    //please change the following three depending your op
+	    String snapshotname = "SanpShot"+"_"+vmName;
+	      Task task;
+		try {
+			 VirtualMachineSnapshot vmsnap = getSnapshotInTree(
+			          vm, snapshotname);
+			      if(vmsnap!=null)
+			      {
+			      task = vmsnap.revertToSnapshot_Task(null);
+			        if(task.waitForMe()==Task.SUCCESS)
+			        {
+			          System.out.println("Reverted to snapshot:" 
+			              + snapshotname);
+			        }
+			      }
+		} catch (InvalidName e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (VmConfigFault e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (SnapshotFault e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (TaskInProgress e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (FileFault e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InvalidState e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (RuntimeFault e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (RemoteException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	     
+	    return false;
+	    
 	}
 	
-	public void removeVM()
+	
+	public synchronized boolean createSnapShot(VirtualMachine vm)
 	{
 		
+	    String vmName= vm.getName();
+	    //please change the following three depending your op
+	    String snapshotname = "SanpShot"+"_"+vmName;
+	    String desc = "SnapShot created for vm. this is description";
+	      Task task;
+		try {
+			task = vm.createSnapshot_Task(
+			      snapshotname, desc, false, false);
+			 if(task.waitForMe()==Task.SUCCESS)
+		      {
+		        System.out.println("Snapshot was created.");
+		        return true;
+		      }
+		} catch (InvalidName e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (VmConfigFault e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (SnapshotFault e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (TaskInProgress e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (FileFault e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InvalidState e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (RuntimeFault e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (RemoteException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	     
+	    return false;
+	    
+	  }
+	
+	public synchronized boolean removeAllSnapShots(VirtualMachine vm)
+	{
+		
+	    String vmName= vm.getName();
+	    //please change the following three depending your op
+			    
+		      try {
+		    	  Task task = vm.removeAllSnapshots_Task();  
+				if(task.waitForMe()== Task.SUCCESS) 
+				  {
+				    System.out.println("Removed all snapshots");
+				    return true;
+				  }
+			} catch (InvalidProperty e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (RuntimeFault e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (RemoteException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			      
+		 
+	     
+	    return false;
+	    
+	  }
+	  
+	
+	public synchronized boolean is_SnapShot_Available(VirtualMachine vm)
+	{
+	    
+	    VirtualMachineSnapshotInfo snapInfo = vm.getSnapshot();
+	    VirtualMachineSnapshotTree[] snapTree = 
+	      snapInfo.getRootSnapshotList();
+	    
+	    	if(snapTree!=null &&  snapTree.length > 0) 
+	    	return true;
+	    	
+	    return false;
 	}
+	       
+	  
+	  
+	
+	  public VirtualMachineSnapshot getSnapshotInTree(
+	      VirtualMachine vm, String snapName)
+	  {
+	    if (vm == null || snapName == null) 
+	    {
+	      return null;
+	    }
+
+	    VirtualMachineSnapshotTree[] snapTree = 
+	        vm.getSnapshot().getRootSnapshotList();
+	    if(snapTree!=null)
+	    {
+	      ManagedObjectReference mor = findSnapshotInTree(
+	          snapTree, snapName);
+	      if(mor!=null)
+	      {
+	        return new VirtualMachineSnapshot(
+	            vm.getServerConnection(), mor);
+	      }
+	    }
+	    return null;
+	  }
+	  
+	  
+	  
+
+	  public ManagedObjectReference findSnapshotInTree(
+	      VirtualMachineSnapshotTree[] snapTree, String snapName)
+	  {
+	    for(int i=0; i <snapTree.length; i++) 
+	    {
+	      VirtualMachineSnapshotTree node = snapTree[i];
+	      if(snapName.equals(node.getName()))
+	      {
+	        return node.getSnapshot();
+	      } 
+	      else 
+	      {
+	        VirtualMachineSnapshotTree[] childTree = 
+	            node.getChildSnapshotList();
+	        if(childTree!=null)
+	        {
+	          ManagedObjectReference mor = findSnapshotInTree(
+	              childTree, snapName);
+	          if(mor!=null)
+	          {
+	            return mor;
+	          }
+	        }
+	      }
+	    }
+	    return null;
+	  }
+
+	  
+	  
+	  
+	  public void printSnapshots(
+	      VirtualMachineSnapshotTree[] snapTree)
+	  {
+	    for (int i = 0; snapTree!=null && i < snapTree.length; i++) 
+	    {
+	      VirtualMachineSnapshotTree node = snapTree[i];
+	      System.out.println("Snapshot Name : " + node.getName());           
+	      VirtualMachineSnapshotTree[] childTree = 
+	        node.getChildSnapshotList();
+	      if(childTree!=null)
+	      {
+	        printSnapshots(childTree);
+	      }
+	    }
+		
+	}
+	  
+	  
+	
+	  
+	  
+
 	
 
 }
